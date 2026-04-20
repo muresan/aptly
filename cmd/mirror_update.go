@@ -1,8 +1,13 @@
 package cmd
 
 import (
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -47,6 +52,7 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 		ignoreSignatures = context.Flags().Lookup("ignore-signatures").Value.Get().(bool)
 	}
 	ignoreChecksums := context.Flags().Lookup("ignore-checksums").Value.Get().(bool)
+	skipDownload := context.Flags().Lookup("skip-download").Value.Get().(bool)
 
 	verifier, err := getVerifier(context.Flags())
 	if err != nil {
@@ -97,6 +103,10 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 		return fmt.Errorf("unable to update: %s", err)
 	}
 
+	if skipDownload {
+		context.Progress().Printf("Skipping file downloads; verifying remote existence for package files...\n")
+	}
+
 	defer func() {
 		// on any interruption, unlock the mirror
 		err = context.ReOpenDatabase()
@@ -123,7 +133,11 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 	context.Progress().Printf("Download queue: %d items (%s)\n", count, utils.HumanBytes(downloadSize))
 
 	// Download from the queue
-	context.Progress().InitBar(downloadSize, true, aptly.BarMirrorUpdateDownloadPackages)
+	if skipDownload {
+		context.Progress().InitBar(int64(count), false, aptly.BarMirrorUpdateDownloadPackages)
+	} else {
+		context.Progress().InitBar(downloadSize, true, aptly.BarMirrorUpdateDownloadPackages)
+	}
 
 	downloadQueue := make(chan int)
 
@@ -182,6 +196,38 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 						continue
 					}
 
+					if skipDownload {
+						// check if file already exists locally
+						if info, err := os.Stat(task.TempDownPath); err == nil && info.Size() >= 0 {
+							task.Done = true
+							if context.Progress() != nil {
+								context.Progress().AddBar(1)
+							}
+							continue
+						}
+						if err != nil {
+							pushError(err)
+							continue
+						}
+						err = os.MkdirAll(filepath.Dir(task.TempDownPath), 0777)
+						if err == nil {
+							var file *os.File
+							file, err = os.Create(task.TempDownPath)
+							if err == nil {
+								err = file.Close()
+							}
+						}
+						if err != nil {
+							pushError(err)
+							continue
+						}
+						task.Done = true
+						if context.Progress() != nil {
+							context.Progress().AddBar(1)
+						}
+						continue
+					}
+
 					// download file...
 					e = context.Downloader().DownloadWithChecksum(
 						context,
@@ -213,6 +259,10 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 	}
 
 	defer func() {
+		if skipDownload {
+			return
+		}
+
 		for _, task := range queue {
 			if task.TempDownPath == "" {
 				continue
@@ -237,8 +287,23 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 			continue
 		}
 
-		// and import it back to the pool
-		task.File.PoolPath, err = context.PackagePool().Import(task.TempDownPath, task.File.Filename, &task.File.Checksums, true, collectionFactory.ChecksumCollection(nil))
+		// and import it back to the pool (even zero-byte placeholders in skip-download mode)
+		var checksums *utils.ChecksumInfo
+		if skipDownload {
+			// For skip-download mode, use filename-based checksums to avoid hash collisions
+			// since all zero-byte files would have identical checksums
+			filenameHash := sha256.Sum256([]byte(task.File.Filename))
+			checksums = &utils.ChecksumInfo{
+				Size:   0,
+				MD5:    fmt.Sprintf("%x", md5.Sum([]byte(task.File.Filename))),
+				SHA1:   fmt.Sprintf("%x", sha1.Sum([]byte(task.File.Filename))),
+				SHA256: fmt.Sprintf("%x", filenameHash),
+				SHA512: fmt.Sprintf("%x", sha512.Sum512([]byte(task.File.Filename))),
+			}
+		} else {
+			checksums = &task.File.Checksums
+		}
+		task.File.PoolPath, err = context.PackagePool().Import(task.TempDownPath, task.File.Filename, checksums, true, collectionFactory.ChecksumCollection(nil))
 		if err != nil {
 			return fmt.Errorf("unable to import file: %s", err)
 		}
@@ -293,6 +358,7 @@ Example:
 	cmd.Flag.Bool("ignore-checksums", false, "ignore checksum mismatches while downloading package files and metadata")
 	cmd.Flag.Bool("ignore-signatures", false, "disable verification of Release file signatures")
 	cmd.Flag.Bool("skip-existing-packages", false, "do not check file existence for packages listed in the internal database of the mirror")
+	cmd.Flag.Bool("skip-download", false, "skip downloading package files and verify remote existence with HEAD")
 	cmd.Flag.Bool("latest", false, "download only latest version of each package (per architecture)")
 	cmd.Flag.Int64("download-limit", 0, "limit download speed (kbytes/sec)")
 	cmd.Flag.String("downloader", "default", "downloader to use (e.g. grab)")
