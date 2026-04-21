@@ -180,6 +180,8 @@ type publishedRepoCreateParams struct {
 	SkipCleanup *bool `                           json:"SkipCleanup"           example:"false"`
 	// Skip bz2 compression for index files
 	SkipBz2 *bool `                               json:"SkipBz2"               example:"false"`
+	// Skip uploading package files, only generate metadata
+	SkipUploads *bool `                           json:"SkipUploads"           example:"false"`
 	// Provide index files by hash
 	AcquireByHash *bool `                         json:"AcquireByHash"         example:"false"`
 	// An optional field containing a comma separated list of OpenPGP key fingerprints to be used for validating the next Release file.
@@ -406,12 +408,12 @@ type publishedRepoUpdateSwitchParams struct {
 	SignedBy *string `                            json:"SignedBy"  example:""`
 	// Enable multiple packages with the same filename in different distributions
 	MultiDist *bool `                             json:"MultiDist"      example:"false"`
-    // Value of Label: field in published repository stanza
-    Label *string `                               json:"Label"          example:"Debian"`
-    // Value of Origin: field in published repository stanza
-    Origin *string `                              json:"Origin"         example:"Debian"`
-    // Version of the release: Optional
-    Version *string `                             json:"Version"        example:"13.3"`
+	// Value of Label: field in published repository stanza
+	Label *string `                               json:"Label"          example:"Debian"`
+	// Value of Origin: field in published repository stanza
+	Origin *string `                              json:"Origin"         example:"Debian"`
+	// Version of the release: Optional
+	Version *string `                             json:"Version"        example:"13.3"`
 }
 
 // @Summary Update Published Repository
@@ -1008,12 +1010,12 @@ type publishedRepoUpdateParams struct {
 	SignedBy *string `                            json:"SignedBy"   example:""`
 	// Enable multiple packages with the same filename in different distributions
 	MultiDist *bool `                             json:"MultiDist"       example:"false"`
-    // Value of Label: field in published repository stanza
-    Label *string `                               json:"Label"          example:"Debian"`
-    // Value of Origin: field in published repository stanza
-    Origin *string `                              json:"Origin"         example:"Debian"`
-    // Version of the release: Optional
-    Version *string `                             json:"Version"        example:"13.3"`
+	// Value of Label: field in published repository stanza
+	Label *string `                               json:"Label"          example:"Debian"`
+	// Value of Origin: field in published repository stanza
+	Origin *string `                              json:"Origin"         example:"Debian"`
+	// Version of the release: Optional
+	Version *string `                             json:"Version"        example:"13.3"`
 }
 
 // @Summary Update Published Repository
