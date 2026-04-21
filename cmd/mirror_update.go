@@ -197,47 +197,34 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 					}
 
 					if skipDownload {
-						// check if file already exists locally
-						if info, err := os.Stat(task.TempDownPath); err == nil && info.Size() >= 0 {
-							task.Done = true
-							if context.Progress() != nil {
-								context.Progress().AddBar(1)
-							}
-							continue
-						}
-						if err != nil {
-							pushError(err)
-							continue
-						}
-						err = os.MkdirAll(filepath.Dir(task.TempDownPath), 0777)
-						if err == nil {
+						// create empty file
+						e = os.MkdirAll(filepath.Dir(task.TempDownPath), 0777)
+						if e == nil {
 							var file *os.File
-							file, err = os.Create(task.TempDownPath)
-							if err == nil {
-								err = file.Close()
+							file, e = os.Create(task.TempDownPath)
+							if e == nil {
+								e = file.Close()
 							}
 						}
-						if err != nil {
-							pushError(err)
+						if e != nil {
+							pushError(e)
 							continue
 						}
-						task.Done = true
 						if context.Progress() != nil {
 							context.Progress().AddBar(1)
 						}
-						continue
-					}
-
-					// download file...
-					e = context.Downloader().DownloadWithChecksum(
-						context,
-						repo.PackageURL(task.File.DownloadURL()).String(),
-						task.TempDownPath,
-						&task.File.Checksums,
-						ignoreChecksums)
-					if e != nil {
-						pushError(e)
-						continue
+					} else {
+						// download file...
+						e = context.Downloader().DownloadWithChecksum(
+							context,
+							repo.PackageURL(task.File.DownloadURL()).String(),
+							task.TempDownPath,
+							&task.File.Checksums,
+							ignoreChecksums)
+						if e != nil {
+							pushError(e)
+							continue
+						}
 					}
 
 					task.Done = true

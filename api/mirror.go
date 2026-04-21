@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -345,6 +346,8 @@ type mirrorUpdateParams struct {
 	SkipExistingPackages bool `   json:"SkipExistingPackages"`
 	// Set "true" to download only the latest version per package/architecture
 	LatestOnly bool `             json:"LatestOnly"`
+	// Set "true" to skip downloading package files and verify remote existence with HEAD
+	SkipDownload bool `           json:"SkipDownload"`
 }
 
 // @Summary Update Mirror
@@ -439,6 +442,10 @@ func apiMirrorsUpdate(c *gin.Context) {
 			collectionFactory.ChecksumCollection(nil), b.SkipExistingPackages, b.LatestOnly)
 		if err != nil {
 			return &task.ProcessReturnValue{Code: http.StatusInternalServerError, Value: nil}, fmt.Errorf("unable to update: %s", err)
+		}
+
+		if b.SkipDownload {
+			log.Info().Msgf("%s: Skipping file downloads; verifying remote existence for package files...", b.Name)
 		}
 
 		defer func() {
@@ -542,16 +549,31 @@ func apiMirrorsUpdate(c *gin.Context) {
 							continue
 						}
 
-						// download file...
-						e = context.Downloader().DownloadWithChecksum(
-							context,
-							remote.PackageURL(task.File.DownloadURL()).String(),
-							task.TempDownPath,
-							&task.File.Checksums,
-							b.IgnoreChecksums)
-						if e != nil {
-							pushError(e)
-							continue
+						if b.SkipDownload {
+							e = os.MkdirAll(filepath.Dir(task.TempDownPath), 0777)
+							if e == nil {
+								var file *os.File
+								file, e = os.Create(task.TempDownPath)
+								if e == nil {
+									e = file.Close()
+								}
+							}
+							if e != nil {
+								pushError(e)
+								continue
+							}
+						} else {
+							// download file...
+							e = context.Downloader().DownloadWithChecksum(
+								context,
+								remote.PackageURL(task.File.DownloadURL()).String(),
+								task.TempDownPath,
+								&task.File.Checksums,
+								b.IgnoreChecksums)
+							if e != nil {
+								pushError(e)
+								continue
+							}
 						}
 
 						// and import it back to the pool
