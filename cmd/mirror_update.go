@@ -104,7 +104,7 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 	}
 
 	if skipDownload {
-		context.Progress().Printf("Skipping file downloads; verifying remote existence for package files...\n")
+		context.Progress().Printf("Skipping file downloads...\n")
 	}
 
 	defer func() {
@@ -246,10 +246,6 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 	}
 
 	defer func() {
-		if skipDownload {
-			return
-		}
-
 		for _, task := range queue {
 			if task.TempDownPath == "" {
 				continue
