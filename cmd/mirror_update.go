@@ -1,13 +1,8 @@
 package cmd
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -178,6 +173,14 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 
 					task := &queue[idx]
 
+					if skipDownload {
+						task.Done = true
+						if context.Progress() != nil {
+							context.Progress().AddBar(1)
+						}
+						continue
+					}
+
 					var e error
 
 					// provision download location
@@ -196,35 +199,16 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 						continue
 					}
 
-					if skipDownload {
-						// create empty file
-						e = os.MkdirAll(filepath.Dir(task.TempDownPath), 0777)
-						if e == nil {
-							var file *os.File
-							file, e = os.Create(task.TempDownPath)
-							if e == nil {
-								e = file.Close()
-							}
-						}
-						if e != nil {
-							pushError(e)
-							continue
-						}
-						if context.Progress() != nil {
-							context.Progress().AddBar(1)
-						}
-					} else {
-						// download file...
-						e = context.Downloader().DownloadWithChecksum(
-							context,
-							repo.PackageURL(task.File.DownloadURL()).String(),
-							task.TempDownPath,
-							&task.File.Checksums,
-							ignoreChecksums)
-						if e != nil {
-							pushError(e)
-							continue
-						}
+					// download file...
+					e = context.Downloader().DownloadWithChecksum(
+						context,
+						repo.PackageURL(task.File.DownloadURL()).String(),
+						task.TempDownPath,
+						&task.File.Checksums,
+						ignoreChecksums)
+					if e != nil {
+						pushError(e)
+						continue
 					}
 
 					task.Done = true
@@ -265,28 +249,11 @@ func aptlyMirrorUpdate(cmd *commander.Command, args []string) error {
 
 		task := &queue[idx]
 
-		if !task.Done {
-			// download not finished yet
+		if !task.Done || task.TempDownPath == "" {
 			continue
 		}
 
-		// and import it back to the pool (even zero-byte placeholders in skip-download mode)
-		var checksums *utils.ChecksumInfo
-		if skipDownload {
-			// For skip-download mode, use filename-based checksums to avoid hash collisions
-			// since all zero-byte files would have identical checksums
-			filenameHash := sha256.Sum256([]byte(task.File.Filename))
-			checksums = &utils.ChecksumInfo{
-				Size:   0,
-				MD5:    fmt.Sprintf("%x", md5.Sum([]byte(task.File.Filename))),
-				SHA1:   fmt.Sprintf("%x", sha1.Sum([]byte(task.File.Filename))),
-				SHA256: fmt.Sprintf("%x", filenameHash),
-				SHA512: fmt.Sprintf("%x", sha512.Sum512([]byte(task.File.Filename))),
-			}
-		} else {
-			checksums = &task.File.Checksums
-		}
-		task.File.PoolPath, err = context.PackagePool().Import(task.TempDownPath, task.File.Filename, checksums, true, collectionFactory.ChecksumCollection(nil))
+		task.File.PoolPath, err = context.PackagePool().Import(task.TempDownPath, task.File.Filename, &task.File.Checksums, true, collectionFactory.ChecksumCollection(nil))
 		if err != nil {
 			return fmt.Errorf("unable to import file: %s", err)
 		}

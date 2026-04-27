@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -531,6 +530,12 @@ func apiMirrorsUpdate(c *gin.Context) {
 
 						task := &queue[idx]
 
+						if b.SkipDownload {
+							task.Done = true
+							taskFinished <- task
+							continue
+						}
+
 						var e error
 
 						// provision download location
@@ -549,37 +554,21 @@ func apiMirrorsUpdate(c *gin.Context) {
 							continue
 						}
 
-						if b.SkipDownload {
-							e = os.MkdirAll(filepath.Dir(task.TempDownPath), 0777)
-							if e == nil {
-								var file *os.File
-								file, e = os.Create(task.TempDownPath)
-								if e == nil {
-									e = file.Close()
-								}
-							}
-							if e != nil {
-								pushError(e)
-								continue
-							}
-						} else {
-							// download file...
-							e = context.Downloader().DownloadWithChecksum(
-								context,
-								remote.PackageURL(task.File.DownloadURL()).String(),
-								task.TempDownPath,
-								&task.File.Checksums,
-								b.IgnoreChecksums)
-							if e != nil {
-								pushError(e)
-								continue
-							}
+						// download file...
+						e = context.Downloader().DownloadWithChecksum(
+							context,
+							remote.PackageURL(task.File.DownloadURL()).String(),
+							task.TempDownPath,
+							&task.File.Checksums,
+							b.IgnoreChecksums)
+						if e != nil {
+							pushError(e)
+							continue
 						}
 
 						// and import it back to the pool
 						task.File.PoolPath, err = context.PackagePool().Import(task.TempDownPath, task.File.Filename, &task.File.Checksums, true, collectionFactory.ChecksumCollection(nil))
 						if err != nil {
-							//return &task.ProcessReturnValue{Code: http.StatusInternalServerError, Value: nil}, fmt.Errorf("unable to import file: %s", err)
 							pushError(err)
 							continue
 						}
