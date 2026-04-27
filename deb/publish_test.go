@@ -425,6 +425,27 @@ func (s *PublishedRepoSuite) TestPublish(c *C) {
 	c.Assert(err, IsNil)
 }
 
+func (s *PublishedRepoSuite) TestPublishSkipUpload(c *C) {
+	s.repo.SkipUpload = true
+	err := s.repo.Publish(s.packagePool, s.provider, s.factory, &NullSigner{}, nil, false, "")
+	c.Assert(err, IsNil)
+
+	// Metadata files should still be generated
+	_, err = os.Stat(filepath.Join(s.publishedStorage.PublicPath(), "ppa/dists/squeeze/Release"))
+	c.Assert(err, IsNil)
+
+	pf, err := os.Open(filepath.Join(s.publishedStorage.PublicPath(), "ppa/dists/squeeze/main/binary-i386/Packages"))
+	c.Assert(err, IsNil)
+	cfr := NewControlFileReader(pf, false, false)
+	st, err := cfr.ReadStanza()
+	c.Assert(err, IsNil)
+	c.Check(st["Filename"], Equals, "pool/main/a/alien-arena/alien-arena-common_7.40-2_i386.deb")
+
+	// Package file itself should NOT be uploaded to the pool
+	_, err = os.Stat(filepath.Join(s.publishedStorage.PublicPath(), "ppa/pool/main/a/alien-arena/alien-arena-common_7.40-2_i386.deb"))
+	c.Assert(err, Not(IsNil))
+}
+
 func (s *PublishedRepoSuite) TestPublishNoSigner(c *C) {
 	err := s.repo.Publish(s.packagePool, s.provider, s.factory, nil, nil, false, "")
 	c.Assert(err, IsNil)

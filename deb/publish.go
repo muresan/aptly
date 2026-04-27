@@ -956,6 +956,17 @@ func (p *PublishedRepo) Publish(packagePool aptly.PackagePool, publishedStorageP
 						if err != nil {
 							return err
 						}
+					} else if !pkg.IsInstaller {
+						// Still update download path so Filename in index is correct
+						if pkg.IsSource {
+							pkg.Extra()["Directory"] = relPath
+						} else {
+							files := pkg.Files()
+							for i := range files {
+								files[i].downloadPath = relPath
+							}
+							pkg.UpdateFiles(files)
+						}
 					}
 					break
 				}

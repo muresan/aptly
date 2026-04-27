@@ -148,6 +148,8 @@ The legacy json configuration is still supported (and also supports comments):
       // Download source packages per default
       "downloadSourcePackages": false,
 
+      // Skip downloading package files, only download metadata
+      "skipDownload": false,
 
     // Signing
     ///////////
@@ -173,6 +175,8 @@ The legacy json configuration is still supported (and also supports comments):
       // Do not create bz2 files
       "skipBz2Publishing": false,
 
+      // Do not publish package files, only generate and publish metadata
+      "skipUpload": false,
 
     // Storage
     ///////////

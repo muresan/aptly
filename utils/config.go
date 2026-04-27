@@ -47,6 +47,7 @@ type ConfigStructure struct { // nolint: maligned
 	DownloadLimit          int64  `json:"downloadSpeedLimit"            yaml:"download_limit"`
 	DownloadRetries        int    `json:"downloadRetries"               yaml:"download_retries"`
 	DownloadSourcePackages bool   `json:"downloadSourcePackages"        yaml:"download_sourcepackages"`
+	SkipDownload           bool   `json:"skipDownload"                  yaml:"skip_download"`
 
 	// Signing
 	GpgProvider      string   `json:"gpgProvider"                   yaml:"gpg_provider"`
@@ -57,6 +58,7 @@ type ConfigStructure struct { // nolint: maligned
 	// Publishing
 	SkipContentsPublishing bool `json:"skipContentsPublishing"        yaml:"skip_contents_publishing"`
 	SkipBz2Publishing      bool `json:"skipBz2Publishing"             yaml:"skip_bz2_publishing"`
+	SkipUpload             bool `json:"skipUpload"                    yaml:"skip_upload"`
 
 	// Storage
 	FileSystemPublishRoots map[string]FileSystemPublishRoot `json:"FileSystemPublishEndpoints"    yaml:"filesystem_publish_endpoints"`

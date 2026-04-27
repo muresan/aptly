@@ -341,7 +341,7 @@ Example:
 	cmd.Flag.Bool("ignore-checksums", false, "ignore checksum mismatches while downloading package files and metadata")
 	cmd.Flag.Bool("ignore-signatures", false, "disable verification of Release file signatures")
 	cmd.Flag.Bool("skip-existing-packages", false, "do not check file existence for packages listed in the internal database of the mirror")
-	cmd.Flag.Bool("skip-download", false, "skip downloading package files and verify remote existence with HEAD")
+	cmd.Flag.Bool("skip-download", false, "skip downloading package files")
 	cmd.Flag.Bool("latest", false, "download only latest version of each package (per architecture)")
 	cmd.Flag.Int64("download-limit", 0, "limit download speed (kbytes/sec)")
 	cmd.Flag.String("downloader", "default", "downloader to use (e.g. grab)")
