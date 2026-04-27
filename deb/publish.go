@@ -78,7 +78,7 @@ type PublishedRepo struct {
 	SkipBz2 bool
 
 	// Skip uploading package files, only generate metadata
-	SkipUploads bool
+	SkipUpload bool
 
 	// True if repo is being re-published
 	rePublishing bool
@@ -951,7 +951,7 @@ func (p *PublishedRepo) Publish(packagePool aptly.PackagePool, publishedStorageP
 						}
 					}
 
-					if !p.SkipUploads {
+					if !p.SkipUpload {
 						err = pkg.LinkFromPool(publishedStorage, packagePool, p.Prefix, relPath, forceOverwrite)
 						if err != nil {
 							return err

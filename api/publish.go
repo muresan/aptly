@@ -181,7 +181,7 @@ type publishedRepoCreateParams struct {
 	// Skip bz2 compression for index files
 	SkipBz2 *bool `                               json:"SkipBz2"               example:"false"`
 	// Skip uploading package files, only generate metadata
-	SkipUploads *bool `                           json:"SkipUploads"           example:"false"`
+	SkipUpload *bool `                            json:"SkipUpload"            example:"false"`
 	// Provide index files by hash
 	AcquireByHash *bool `                         json:"AcquireByHash"         example:"false"`
 	// An optional field containing a comma separated list of OpenPGP key fingerprints to be used for validating the next Release file.

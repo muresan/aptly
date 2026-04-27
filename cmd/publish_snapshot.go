@@ -146,8 +146,8 @@ func aptlyPublishSnapshotOrRepo(cmd *commander.Command, args []string) error {
 		published.SkipBz2 = context.Flags().Lookup("skip-bz2").Value.Get().(bool)
 	}
 
-	if context.Flags().IsSet("skip-uploads") {
-		published.SkipUploads = context.Flags().Lookup("skip-uploads").Value.Get().(bool)
+	if context.Flags().IsSet("skip-upload") {
+		published.SkipUpload = context.Flags().Lookup("skip-upload").Value.Get().(bool)
 	}
 
 	if context.Flags().IsSet("acquire-by-hash") {
@@ -251,7 +251,7 @@ Example:
 	cmd.Flag.Bool("skip-signing", false, "don't sign Release files with GPG")
 	cmd.Flag.Bool("skip-contents", false, "don't generate Contents indexes")
 	cmd.Flag.Bool("skip-bz2", false, "don't generate bzipped indexes")
-	cmd.Flag.Bool("skip-uploads", false, "skip uploading package files, only generate metadata")
+	cmd.Flag.Bool("skip-upload", false, "skip uploading package files, only generate and upload metadata")
 	cmd.Flag.String("origin", "", "overwrite origin name to publish")
 	cmd.Flag.String("notautomatic", "", "overwrite value for NotAutomatic field")
 	cmd.Flag.String("butautomaticupgrades", "", "overwrite value for ButAutomaticUpgrades field")
